@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Gym">
+<meta name="theme-color" content="#0f0f0e">
+<title>Training — Upper/Lower System</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0f0e;
+    --surface: #161614;
+    --surface2: #1e1e1b;
+    --border: #2a2a26;
+    --accent: #e8d5a3;
+    --accent2: #c9a84c;
+    --red: #c96b4c;
+    --green: #7ab87a;
+    --text: #e8e6e0;
+    --muted: #7a7870;
+    --lower-color: #c96b4c;
+    --upper-color: #7ab8a8;
+    --full-color: #b08ad4;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    padding: calc(20px + env(safe-area-inset-top)) 20px calc(60px + env(safe-area-inset-bottom));
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+  .header { border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 20px; }
+  .header-eyebrow { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.15em; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; }
+  .header h1 { font-family: 'Bebas Neue', sans-serif; font-size: clamp(34px, 7vw, 56px); letter-spacing: 0.04em; color: var(--accent); line-height: 1; }
+
+  /* GEAR SWITCHER */
+  .gear-switch {
+    display: flex;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 18px;
+    gap: 4px;
+    position: sticky;
+    top: calc(8px + env(safe-area-inset-top));
+    z-index: 50;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background: rgba(22,22,20,0.92);
+  }
+  .gear-btn {
+    flex: 1;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 12px 8px;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .gear-btn.active {
+    background: rgba(232,213,163,0.1);
+    color: var(--accent);
+    border: 1px solid rgba(232,213,163,0.2);
+  }
+  .gear-btn .sub { display: block; font-size: 8.5px; opacity: 0.6; margin-top: 2px; letter-spacing: 0.06em; text-transform: none; }
+
+  /* DB STATUS */
+  .db-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 14px; margin-bottom: 20px; gap: 10px;
+  }
+  .db-status { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 0.08em; display: flex; align-items: center; gap: 7px; }
+  .db-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+  .db-dot.err { background: var(--red); }
+  .btn-reset {
+    font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 0.1em;
+    text-transform: uppercase; background: transparent; border: 1px solid var(--border);
+    color: var(--muted); padding: 6px 11px; border-radius: 5px; cursor: pointer;
+    white-space: nowrap; -webkit-tap-highlight-color: transparent;
+  }
+  .btn-reset:active { border-color: var(--red); color: var(--red); }
+
+  /* SCHEDULE */
+  .week-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; margin-bottom: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+  .week-day { text-align: center; padding: 8px 2px; border-radius: 5px; font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 0.06em; }
+  .week-day .dow { color: var(--muted); text-transform: uppercase; display: block; margin-bottom: 5px; font-size: 8.5px; }
+  .week-day .label { font-size: 8px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; padding: 3px 4px; border-radius: 3px; display: inline-block; }
+  .week-day.u { background: rgba(122,184,168,0.07); }
+  .week-day.l { background: rgba(201,107,76,0.07); }
+  .week-day.f { background: rgba(176,138,212,0.07); }
+  .week-day.r { opacity: 0.4; }
+  .label.u { background: rgba(122,184,168,0.15); color: var(--upper-color); }
+  .label.l { background: rgba(201,107,76,0.15); color: var(--lower-color); }
+  .label.f { background: rgba(176,138,212,0.15); color: var(--full-color); }
+  .label.r { color: var(--muted); }
+
+  .schedule-note { background: var(--surface2); border-left: 2px solid var(--accent2); padding: 10px 14px; border-radius: 0 6px 6px 0; margin-bottom: 24px; font-size: 12px; color: var(--muted); }
+  .schedule-note strong { color: var(--text); }
+
+  .section-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; margin-top: 6px; }
+
+  /* DAY CARD */
+  .day-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 18px; overflow: hidden; }
+  .day-header { display: flex; align-items: center; gap: 12px; padding: 15px 16px 13px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .day-tag { font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; padding: 4px 9px; border-radius: 4px; flex-shrink: 0; }
+  .day-tag.u { background: rgba(122,184,168,0.12); color: var(--upper-color); border: 1px solid rgba(122,184,168,0.25); }
+  .day-tag.l { background: rgba(201,107,76,0.12); color: var(--lower-color); border: 1px solid rgba(201,107,76,0.25); }
+  .day-tag.f { background: rgba(176,138,212,0.12); color: var(--full-color); border: 1px solid rgba(176,138,212,0.25); }
+  .day-tag.c { background: rgba(232,213,163,0.08); color: var(--accent); border: 1px solid rgba(232,213,163,0.2); }
+  .day-title { font-family: 'Bebas Neue', sans-serif; font-size: 21px; letter-spacing: 0.06em; color: var(--text); }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: var(--surface2); }
+  th { font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); padding: 9px 12px; text-align: left; font-weight: 400; }
+  th:last-child { text-align: right; }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  .num { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); }
+  .exercise-name { font-weight: 500; color: var(--text); font-size: 13px; }
+  .exercise-note { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+
+  .badge { display: inline-block; font-family: 'DM Mono', monospace; font-size: 8px; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 5px; border-radius: 3px; margin-left: 5px; vertical-align: middle; }
+  .badge.str { background: rgba(201,107,76,0.12); color: var(--red); border: 1px solid rgba(201,107,76,0.2); }
+  .badge.hyp { background: rgba(122,184,168,0.1); color: var(--upper-color); border: 1px solid rgba(122,184,168,0.2); }
+  .badge.pri { background: rgba(201,160,76,0.12); color: var(--accent2); border: 1px solid rgba(201,160,76,0.2); }
+  tr.hl td { background: rgba(232,213,163,0.025); }
+
+  .load-cell { text-align: right; }
+  .load-input, .reps-input {
+    font-family: 'DM Mono', monospace; font-size: 12px;
+    background: transparent; border: none;
+    border-bottom: 1px dashed transparent;
+    padding: 4px; border-radius: 3px;
+    transition: all 0.15s; -webkit-appearance: none; outline: none; cursor: pointer;
+    min-height: 30px;
+  }
+  .load-input { color: var(--muted); text-align: right; width: 84px; }
+  .reps-input { color: var(--accent); text-align: left; width: 92px; }
+  .load-input:focus { background: var(--surface2); border-bottom: 1px dashed var(--accent2); color: var(--accent); cursor: text; }
+  .reps-input:focus { background: var(--surface2); border-bottom: 1px dashed var(--upper-color); color: var(--text); cursor: text; }
+  .load-input.modified { color: var(--accent2); }
+  .reps-input.modified { color: var(--upper-color); }
+
+  /* NOTES */
+  .notes-block { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 15px 16px; margin-bottom: 14px; }
+  .notes-title { font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent2); margin-bottom: 9px; }
+  .notes-block ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .notes-block ul li { color: var(--muted); font-size: 12px; padding-left: 13px; position: relative; }
+  .notes-block ul li::before { content: "—"; position: absolute; left: 0; color: var(--border); }
+  .notes-block ul li strong { color: var(--text); font-weight: 500; }
+
+  /* HANG TIMER */
+  .hang-timer { display: flex; flex-direction: column; gap: 10px; padding: 16px; border-bottom: 1px solid var(--border); background: rgba(122,184,168,0.03); }
+  .hang-timer-label { font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  .hang-timer-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .timer-display { font-family: 'Bebas Neue', sans-serif; font-size: 46px; letter-spacing: 0.06em; color: var(--accent); line-height: 1; min-width: 100px; text-align: center; transition: color 0.3s; }
+  .timer-display.running { color: var(--green); }
+  .timer-display.done { color: var(--red); }
+  .timer-controls { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 150px; }
+  .timer-set-row { display: flex; align-items: center; gap: 8px; }
+  .set-dots { display: flex; gap: 6px; }
+  .set-dot { width: 10px; height: 10px; border-radius: 50%; border: 1px solid var(--border); transition: all 0.2s; }
+  .set-dot.done-dot { background: var(--green); border-color: var(--green); }
+  .set-dot.active-dot { background: var(--accent); border-color: var(--accent); }
+  .btn-timer { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; padding: 12px 18px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .btn-start { background: rgba(122,184,168,0.1); color: var(--upper-color); border-color: rgba(122,184,168,0.3); }
+  .btn-stop { background: rgba(201,107,76,0.1); color: var(--red); border-color: rgba(201,107,76,0.3); }
+  .btn-next { background: rgba(232,213,163,0.08); color: var(--accent); border-color: rgba(232,213,163,0.2); }
+  .btn-reset-timer { background: transparent; color: var(--muted); border-color: var(--border); font-size: 9px; padding: 10px 12px; }
+  .hang-best { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); }
+  .hang-best span { color: var(--accent2); }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  @media (max-width: 600px) {
+    body { padding-left: 12px; padding-right: 12px; }
+    td, th { padding: 9px 8px; }
+    .load-input { width: 72px; font-size: 11.5px; }
+    .reps-input { width: 80px; font-size: 11.5px; }
+    .exercise-name { font-size: 12.5px; }
+    .exercise-note { font-size: 10px; }
+    .week-day .dow { font-size: 8px; }
+    .week-day .label { font-size: 7px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-eyebrow">Training System · IndexedDB · PWA-Ready</div>
+  <h1>Upper / Lower System</h1>
+</div>
+
+<!-- GEAR SWITCHER -->
+<div class="gear-switch">
+  <button class="gear-btn active" id="btn4day" onclick="switchGear('4day')">
+    4-Day Split
+    <span class="sub">Full training weeks</span>
+  </button>
+  <button class="gear-btn" id="btn3day" onclick="switchGear('3day')">
+    3-Day U/L/F
+    <span class="sub">Busy or cardio weeks</span>
+  </button>
+</div>
+
+<!-- DB STATUS -->
+<div class="db-bar">
+  <div class="db-status"><div class="db-dot" id="dbDot"></div><span id="dbStatus">Connecting to database…</span></div>
+  <button class="btn-reset" onclick="resetGear()">Reset current gear</button>
+</div>
+
+<div id="view4day" class="view active"></div>
+<div id="view3day" class="view"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// ROUTINE DATA
+// ═══════════════════════════════════════════════════════════════════
+const ROUTINES = {
+  '4day': {
+    schedule: [
+      { dow: 'Day 1', cls: 'l', label: 'Lower A' },
+      { dow: 'Day 2', cls: 'u', label: 'Upper A' },
+      { dow: 'Day 2.5', cls: 'r', label: 'Rest?' },
+      { dow: 'Day 3', cls: 'l', label: 'Lower B' },
+      { dow: 'Day 4', cls: 'u', label: 'Upper B' },
+      { dow: 'Off', cls: 'r', label: 'Walk/Run' },
+      { dow: 'Off', cls: 'r', label: 'Walk/Run' },
+    ],
+    note: '<strong>Flexible sequence.</strong> Run Days 1→4 back-to-back or insert one rest between Day 2 and Day 3. Off days: walking or running. <strong>Core & Grip after Day 1 + Day 3.</strong>',
+    days: [
+      { id: 'la', tag: 'Lower A', cls: 'l', title: 'Strength — Squat Focus', sub: 'Day 1 · Core & Grip after', exercises: [
+        { n: 'Barbell Back Squat', b: ['str'], sr: '4 × 3–6', ld: '275 lb', hl: 1 },
+        { n: 'Romanian Deadlift', note: 'Hamstring lengthened focus', sr: '3 × 6–8', ld: '315 lb' },
+        { n: 'Hip Thrust', sr: '3 × 8–10', ld: '180 lb' },
+        { n: 'Wide-Stance Lunge', sr: '2 × 15–20/leg', ld: '45 lb' },
+        { n: 'Prone Leg Curl', sr: '3 × 8–12', ld: '170 lb' },
+        { n: 'Calf Raise (Machine)', sr: '3 × 15–20', ld: '180 lb' },
+      ]},
+      { id: 'ua', tag: 'Upper A', cls: 'u', title: 'Strength + Back Width', sub: 'Day 2', exercises: [
+        { n: 'Flat Barbell Bench Press', b: ['str'], note: 'Top set + 2 back-off sets (~90%)', sr: '3 × 3–5', ld: '225 lb', hl: 1 },
+        { n: 'Weighted Pull-Ups', b: ['str','pri'], note: 'Dead hang each rep, full ROM', sr: '4 × 5–7', ld: '+45 lb', hl: 1 },
+        { n: 'T-Bar Row', b: ['pri'], note: 'Chest supported preferred', sr: '4 × 5–7', ld: '160 lb' },
+        { n: 'DB Shoulder Press', sr: '3 × 6–8', ld: '55 lb' },
+        { n: 'Plate-Loaded Fly / Cable Fly', note: 'Full stretch at bottom', sr: '3 × 12–15', ld: '160 lb' },
+        { n: 'Lateral Raise', sr: '3 × 12–15', ld: '30 lb' },
+        { n: 'Rear Delt Fly', sr: '3 × 12–15', ld: '160 lb' },
+        { n: 'EZ Bar Curl', b: ['pri'], note: 'Heavy — thickness focus', sr: '3 × 6–8', ld: '95 lb', hl: 1 },
+        { n: 'Cable OH Triceps Extension', sr: '3 × 8–12', ld: '75 lb' },
+      ]},
+      { id: 'lb', tag: 'Lower B', cls: 'l', title: 'Strength — Deadlift Focus', sub: 'Day 3 · Core & Grip after', exercises: [
+        { n: 'Conventional Deadlift', b: ['str'], sr: '3 × 3–5', ld: '425 lb', hl: 1 },
+        { n: 'Pendulum Squat / Hack Squat', note: 'Quad isolation — no extra spinal load', sr: '3 × 8–10', ld: '135 lb' },
+        { n: 'Plate Leg Extension', sr: '3 × 10–12', ld: '180 lb' },
+        { n: '45° Glute Back Extension', sr: '3 × 12–15', ld: 'BW → +load' },
+        { n: 'Wide-Stance Lunge', sr: '2 × 15/leg', ld: '45 lb' },
+        { n: 'Calf Raise', sr: '2 × 15–20', ld: '150 lb' },
+      ]},
+      { id: 'ub', tag: 'Upper B', cls: 'u', title: 'Hypertrophy + Priority Work', sub: 'Day 4', exercises: [
+        { n: 'Incline Barbell Press', b: ['str','pri'], note: 'Upper chest — opener on fresh CNS', sr: '4 × 4–6', ld: '195 lb', hl: 1 },
+        { n: 'Seated Cable Row', b: ['pri'], note: 'Wide grip = width · Narrow = thickness. Alternate weekly.', sr: '4 × 8–10', ld: '180 lb', hl: 1 },
+        { n: 'Chest-Supported DB Row', b: ['pri'], note: 'Pure mid-back — no spinal erector involvement', sr: '3 × 8–10', ld: '80 lb/hand', hl: 1 },
+        { n: 'Lat Pulldown', note: 'Higher rep hypertrophy range', sr: '3 × 10–12', ld: '200 lb' },
+        { n: 'Lateral Raise', sr: '2 × 12–15', ld: '30 lb' },
+        { n: 'Incline DB Curl', b: ['pri'], note: 'Long head stretch', sr: '3 × 8–12', ld: '35 lb', hl: 1 },
+        { n: 'Hammer Curl', note: 'Brachialis + forearm tie-in', sr: '2 × 10–12', ld: '35 lb' },
+        { n: 'Cable Pushdown', b: ['hyp'], sr: '3 × 10–12', ld: '85 lb' },
+      ]},
+    ],
+    coreDays: 'Day 1 + Day 3',
+    notes: [
+      { title: 'Key Structure', items: [
+        '<strong>Squat and Deadlift separated</strong> — each anchors its own lower day.',
+        '<strong>Back ~14 sets/week</strong> across pull-ups, T-bar, cable row, CS row, pulldown.',
+        '<strong>Arms 2× frequency</strong> — heavy EZ curl Day 2, stretch work Day 4.',
+        '<strong>Deload every 6–8 weeks</strong> — 40% volume cut, non-negotiable at these loads.',
+      ]},
+    ],
+  },
+  '3day': {
+    schedule: [
+      { dow: 'Day 1', cls: 'u', label: 'Upper' },
+      { dow: 'Rest', cls: 'r', label: 'Run/Walk' },
+      { dow: 'Day 2', cls: 'l', label: 'Lower' },
+      { dow: 'Rest', cls: 'r', label: 'Run/Walk' },
+      { dow: 'Day 3', cls: 'f', label: 'Full Body' },
+      { dow: 'Rest', cls: 'r', label: 'Run/Walk' },
+      { dow: 'Off', cls: 'r', label: 'Full Rest' },
+    ],
+    note: '<strong>Busy-week / cardio gear.</strong> Train · run · train · run · train · run · rest is the ideal template. Keep at least one day between Day 3 (Full) and the next Day 2 (Lower). <strong>Core & Grip after Day 2 + Day 3.</strong>',
+    days: [
+      { id: 'u', tag: 'Upper', cls: 'u', title: 'Strength + Back Width + Arms', sub: 'Day 1', exercises: [
+        { n: 'Flat Barbell Bench Press', b: ['str'], note: 'Top set + 2 back-off sets (~90%)', sr: '3 × 3–5', ld: '225 lb', hl: 1 },
+        { n: 'Weighted Pull-Ups', b: ['str','pri'], note: 'Dead hang each rep, full ROM', sr: '4 × 5–7', ld: '+45 lb', hl: 1 },
+        { n: 'T-Bar Row', b: ['pri'], note: 'Chest supported preferred', sr: '4 × 5–7', ld: '160 lb', hl: 1 },
+        { n: 'DB Shoulder Press', sr: '3 × 6–8', ld: '55 lb' },
+        { n: 'Incline Barbell Press', b: ['pri'], note: 'Upper chest — consolidated here in 3-day gear', sr: '3 × 5–7', ld: '195 lb' },
+        { n: 'Lateral Raise', sr: '3 × 12–15', ld: '30 lb' },
+        { n: 'Rear Delt Fly', sr: '3 × 12–15', ld: '160 lb' },
+        { n: 'EZ Bar Curl', b: ['pri'], note: 'Heavy — thickness focus', sr: '3 × 6–8', ld: '95 lb', hl: 1 },
+        { n: 'Cable OH Triceps Extension', sr: '3 × 8–12', ld: '75 lb' },
+      ]},
+      { id: 'l', tag: 'Lower', cls: 'l', title: 'Strength — Squat Focus', sub: 'Day 2 · Core & Grip after', exercises: [
+        { n: 'Barbell Back Squat', b: ['str'], sr: '4 × 3–6', ld: '275 lb', hl: 1 },
+        { n: 'Romanian Deadlift', note: 'Hamstring lengthened focus', sr: '3 × 6–8', ld: '315 lb' },
+        { n: 'Hip Thrust', sr: '3 × 8–10', ld: '180 lb' },
+        { n: 'Wide-Stance Lunge', sr: '2 × 15–20/leg', ld: '45 lb' },
+        { n: 'Prone Leg Curl', sr: '3 × 8–12', ld: '170 lb' },
+        { n: 'Plate Leg Extension', sr: '2 × 10–12', ld: '180 lb' },
+        { n: 'Calf Raise (Machine)', sr: '3 × 15–20', ld: '180 lb' },
+      ]},
+      { id: 'f', tag: 'Full Body', cls: 'f', title: 'Frequency + Priority Revisit', sub: 'Day 3 · Core & Grip after', exercises: [
+        { n: 'Conventional Deadlift', b: ['str'], note: 'Primary mover — anchors this day', sr: '3 × 3–5', ld: '425 lb', hl: 1 },
+        { n: 'Seated Cable Row', b: ['pri'], note: 'Alternate wide/narrow grip weekly', sr: '4 × 8–10', ld: '180 lb', hl: 1 },
+        { n: 'Chest-Supported DB Row', b: ['pri'], note: 'Mid-back thickness — no spinal fatigue on top of DL', sr: '3 × 8–10', ld: '80 lb/hand', hl: 1 },
+        { n: 'Pendulum Squat / Hack Squat', note: 'Quad flush — light, no spinal load', sr: '2 × 10–12', ld: '135 lb' },
+        { n: 'Plate-Loaded Fly / Cable Fly', note: 'Chest lengthened stimulus', sr: '3 × 12–15', ld: '160 lb' },
+        { n: 'Lat Pulldown', b: ['hyp'], note: 'Second lat hit this week', sr: '3 × 10–12', ld: '200 lb' },
+        { n: 'Incline DB Curl', b: ['pri'], note: 'Long head stretch — second bicep hit', sr: '3 × 8–12', ld: '35 lb', hl: 1 },
+        { n: 'Cable Pushdown', b: ['hyp'], sr: '3 × 10–12', ld: '85 lb' },
+        { n: '45° Glute Back Extension', note: 'Glute/low-back tie-in after DL', sr: '2 × 12–15', ld: 'BW → +load' },
+      ]},
+    ],
+    coreDays: 'Day 2 + Day 3',
+    notes: [
+      { title: '3-Day Gear Notes', items: [
+        '<strong>Deadlift anchors Day 3</strong> — no Lower B day, so it leads Full Body.',
+        '<strong>Incline press consolidates into Day 1</strong> — slightly lower load expected after flat bench.',
+        '<strong>Frequency ~1.5× per muscle</strong> — upper Day 1 + revisit Day 3; lower Day 2 + light Day 3.',
+        '<strong>Same loads as 4-day gear</strong> — weights carry across; switch gears freely week to week.',
+      ]},
+    ],
+  },
+};
+
+const CORE = [
+  { n: 'Hanging Leg Raise', note: 'Superset with B', sr: '2 × 15–20', ld: null },
+  { n: 'Cable Crunch', note: 'Superset with A', sr: '2 × 15–20', ld: '85 lb' },
+  { n: 'Wrist Roller', note: 'Both directions — flexion + extension', sr: '2 × up+down', ld: '10–25 lb', hl: 1 },
+  { n: 'Reverse Curl (EZ Bar)', note: 'Brachioradialis + forearm extensors', sr: '2 × 10–15', ld: '45–55 lb', hl: 1 },
+  { n: 'Farmer Carry / Heavy Hold', note: 'Add 5–10 lb or +5 sec each week', sr: '2 × max hold', ld: '180 lb' },
+];
+
+// ═══════════════════════════════════════════════════════════════════
+// INDEXEDDB LAYER
+// ═══════════════════════════════════════════════════════════════════
+const DB_NAME = 'gym_tracker';
+const DB_VERSION = 1;
+let db = null;
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains('values')) {
+        // key: `${gear}:${type}:${id}`  e.g. "4day:load:ua1"
+        d.createObjectStore('values', { keyPath: 'key' });
+      }
+      if (!d.objectStoreNames.contains('meta')) {
+        d.createObjectStore('meta', { keyPath: 'key' });
+      }
+    };
+    req.onsuccess = (e) => { db = e.target.result; resolve(db); };
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function dbSet(store, key, value) {
+  return new Promise((resolve, reject) => {
+    if (!db) return reject(new Error('no db'));
+    const tx = db.transaction(store, 'readwrite');
+    tx.objectStore(store).put({ key, value });
+    tx.oncomplete = () => resolve();
+    tx.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function dbGet(store, key) {
+  return new Promise((resolve, reject) => {
+    if (!db) return reject(new Error('no db'));
+    const tx = db.transaction(store, 'readonly');
+    const req = tx.objectStore(store).get(key);
+    req.onsuccess = () => resolve(req.result ? req.result.value : undefined);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function dbGetAllWithPrefix(store, prefix) {
+  return new Promise((resolve, reject) => {
+    if (!db) return reject(new Error('no db'));
+    const tx = db.transaction(store, 'readonly');
+    const req = tx.objectStore(store).getAll();
+    req.onsuccess = () => {
+      const out = {};
+      (req.result || []).forEach(r => {
+        if (r.key.startsWith(prefix)) out[r.key] = r.value;
+      });
+      resolve(out);
+    };
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function dbDeleteWithPrefix(store, prefix) {
+  return new Promise((resolve, reject) => {
+    if (!db) return reject(new Error('no db'));
+    const tx = db.transaction(store, 'readwrite');
+    const st = tx.objectStore(store);
+    const req = st.getAll();
+    req.onsuccess = () => {
+      (req.result || []).forEach(r => {
+        if (r.key.startsWith(prefix)) st.delete(r.key);
+      });
+    };
+    tx.oncomplete = () => resolve();
+    tx.onerror = (e) => reject(e.target.error);
+  });
+}
+
+// One-time migration from old localStorage keys
+async function migrateFromLocalStorage() {
+  const migrated = await dbGet('meta', 'ls_migrated');
+  if (migrated) return;
+  try {
+    const maps = [
+      { ls: 'gym_weights_v2', prefix: '4day:load:' },
+      { ls: 'gym_reps_v1',    prefix: '4day:reps:' },
+      { ls: 'gym_weights_3d_v1', prefix: '3day:load:' },
+      { ls: 'gym_reps_3d_v1',    prefix: '3day:reps:' },
+    ];
+    for (const m of maps) {
+      const raw = localStorage.getItem(m.ls);
+      if (!raw) continue;
+      const obj = JSON.parse(raw);
+      for (const [id, val] of Object.entries(obj)) {
+        await dbSet('values', m.prefix + id, val);
+      }
+    }
+    const hang = localStorage.getItem('hang_best_v2');
+    if (hang) await dbSet('meta', 'hang_best', parseInt(hang));
+  } catch(e) {}
+  await dbSet('meta', 'ls_migrated', true);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RENDERING
+// ═══════════════════════════════════════════════════════════════════
+let currentGear = '4day';
+
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+
+function renderExerciseRow(gear, dayId, idx, ex) {
+  const num = typeof ex.numOverride === 'string' ? ex.numOverride : (idx + 1);
+  const badges = (ex.b || []).map(b => `<span class="badge ${b}">${b}</span>`).join('');
+  const note = ex.note ? `<div class="exercise-note">${ex.note}</div>` : '';
+  const srId = `${gear}:reps:${dayId}${idx}`;
+  const ldId = `${gear}:load:${dayId}${idx}`;
+  const loadCell = ex.ld === null
+    ? `<span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);">BW</span>`
+    : `<input class="load-input" data-key="${ldId}" data-default="${esc(ex.ld)}" value="${esc(ex.ld)}" inputmode="text">`;
+  return `<tr${ex.hl ? ' class="hl"' : ''}>
+    <td class="num">${num}</td>
+    <td><div class="exercise-name">${ex.n}${badges}</div>${note}</td>
+    <td class="sets-reps-cell"><input class="reps-input" data-key="${srId}" data-default="${esc(ex.sr)}" value="${esc(ex.sr)}" inputmode="text"></td>
+    <td class="load-cell">${loadCell}</td>
+  </tr>`;
+}
+
+function renderDayCard(gear, day) {
+  const rows = day.exercises.map((ex, i) => renderExerciseRow(gear, day.id, i, ex)).join('');
+  return `
+  <div class="section-label">${day.sub} — ${day.tag}</div>
+  <div class="day-card">
+    <div class="day-header">
+      <span class="day-tag ${day.cls}">${day.tag}</span>
+      <span class="day-title">${day.title}</span>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>Exercise</th><th>Sets × Reps</th><th>Load</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+function renderCoreCard(gear, coreDays) {
+  const letters = ['A','B','C','D','E'];
+  const rows = CORE.map((ex, i) => renderExerciseRow(gear, 'core', i, { ...ex, numOverride: letters[i] })).join('');
+  return `
+  <div class="section-label">Core, Grip & Forearms — ${coreDays}</div>
+  <div class="day-card">
+    <div class="day-header">
+      <span class="day-tag c">Finisher</span>
+      <span class="day-title">Core + Dead Hang + Forearms</span>
+    </div>
+    <div class="hang-timer">
+      <div class="hang-timer-label">Dead Hang Timer — 3 sets · Progressive</div>
+      <div class="hang-timer-row">
+        <div class="timer-display" id="timerDisplay-${gear}">00:00</div>
+        <div class="timer-controls">
+          <div class="timer-set-row">
+            <div class="set-dots">
+              <div class="set-dot" id="dot0-${gear}"></div>
+              <div class="set-dot" id="dot1-${gear}"></div>
+              <div class="set-dot" id="dot2-${gear}"></div>
+            </div>
+            <span id="setLabel-${gear}" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);">Set 1 of 3</span>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn-timer btn-start" id="btnStart-${gear}" onclick="startHang('${gear}')">Start</button>
+            <button class="btn-timer btn-stop" id="btnStop-${gear}" onclick="stopHang('${gear}')" style="display:none">Stop</button>
+            <button class="btn-timer btn-next" id="btnNext-${gear}" onclick="nextSet('${gear}')" style="display:none">Next Set</button>
+            <button class="btn-timer btn-reset-timer" onclick="resetHang('${gear}')">Reset</button>
+          </div>
+          <div class="hang-best">Session best: <span id="bestTime-${gear}">—</span> &nbsp;|&nbsp; All-time: <span id="allTimeBest-${gear}">—</span></div>
+        </div>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>Exercise</th><th>Sets × Reps</th><th>Load</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+function renderGear(gear) {
+  const r = ROUTINES[gear];
+  const schedCells = r.schedule.map(s => `
+    <div class="week-day ${s.cls}">
+      <span class="dow">${s.dow}</span>
+      <span class="label ${s.cls}">${s.label}</span>
+    </div>`).join('');
+  const days = r.days.map(d => renderDayCard(gear, d)).join('');
+  const notes = r.notes.map(nb => `
+    <div class="notes-block">
+      <div class="notes-title">${nb.title}</div>
+      <ul>${nb.items.map(i => `<li>${i}</li>`).join('')}</ul>
+    </div>`).join('');
+
+  return `
+    <div class="section-label">Training Schedule</div>
+    <div class="week-grid">${schedCells}</div>
+    <div class="schedule-note">${r.note}</div>
+    ${days}
+    ${renderCoreCard(gear, r.coreDays)}
+    <div class="section-label">Programming Notes</div>
+    ${notes}`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// VALUE BINDING (IndexedDB-backed)
+// ═══════════════════════════════════════════════════════════════════
+async function hydrateInputs(gear) {
+  const saved = await dbGetAllWithPrefix('values', gear + ':');
+  document.querySelectorAll(`#view${gear} .load-input, #view${gear} .reps-input`).forEach(inp => {
+    const key = inp.dataset.key;
+    if (saved[key] !== undefined) {
+      inp.value = saved[key];
+      inp.classList.toggle('modified', inp.value !== inp.dataset.default);
+    }
+  });
+}
+
+function bindInputs(gear) {
+  document.querySelectorAll(`#view${gear} .load-input, #view${gear} .reps-input`).forEach(inp => {
+    inp.addEventListener('focus', () => inp.select());
+    inp.addEventListener('blur', async () => {
+      try {
+        await dbSet('values', inp.dataset.key, inp.value);
+        inp.classList.toggle('modified', inp.value !== inp.dataset.default);
+      } catch(e) { setDbStatus(false, 'Save failed — storage error'); }
+    });
+  });
+}
+
+async function resetGear() {
+  const label = currentGear === '4day' ? '4-Day' : '3-Day';
+  if (!confirm(`Reset all ${label} weights and reps to defaults?`)) return;
+  try {
+    await dbDeleteWithPrefix('values', currentGear + ':');
+    document.querySelectorAll(`#view${currentGear} .load-input, #view${currentGear} .reps-input`).forEach(inp => {
+      inp.value = inp.dataset.default;
+      inp.classList.remove('modified');
+    });
+  } catch(e) { setDbStatus(false, 'Reset failed'); }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// GEAR SWITCHING
+// ═══════════════════════════════════════════════════════════════════
+async function switchGear(gear) {
+  currentGear = gear;
+  document.getElementById('btn4day').classList.toggle('active', gear === '4day');
+  document.getElementById('btn3day').classList.toggle('active', gear === '3day');
+  document.getElementById('view4day').classList.toggle('active', gear === '4day');
+  document.getElementById('view3day').classList.toggle('active', gear === '3day');
+  try { await dbSet('meta', 'last_gear', gear); } catch(e) {}
+  window.scrollTo({ top: 0 });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// DEAD HANG TIMER (per-gear UI, shared all-time best)
+// ═══════════════════════════════════════════════════════════════════
+const timers = {};
+function getT(gear) {
+  if (!timers[gear]) timers[gear] = { interval: null, start: null, elapsed: 0, set: 0, best: 0 };
+  return timers[gear];
+}
+function formatTime(ms) {
+  const s = Math.floor(ms / 1000), m = Math.floor(s / 60), sec = s % 60;
+  return (m > 0 ? m + ':' : '0:') + sec.toString().padStart(2, '0');
+}
+async function loadHangBest(gear) {
+  try {
+    const b = await dbGet('meta', 'hang_best');
+    if (b > 0) document.getElementById('allTimeBest-' + gear).textContent = formatTime(b);
+  } catch(e) {}
+}
+async function saveHangBest(ms) {
+  try {
+    const prev = (await dbGet('meta', 'hang_best')) || 0;
+    if (ms > prev) await dbSet('meta', 'hang_best', ms);
+  } catch(e) {}
+}
+function startHang(gear) {
+  const t = getT(gear);
+  if (t.interval) return;
+  t.start = Date.now(); t.elapsed = 0;
+  t.interval = setInterval(() => {
+    t.elapsed = Date.now() - t.start;
+    document.getElementById('timerDisplay-' + gear).textContent = formatTime(t.elapsed);
+  }, 100);
+  document.getElementById('btnStart-' + gear).style.display = 'none';
+  document.getElementById('btnStop-' + gear).style.display = '';
+  document.getElementById('timerDisplay-' + gear).className = 'timer-display running';
+  updateDots(gear);
+}
+async function stopHang(gear) {
+  const t = getT(gear);
+  if (!t.interval) return;
+  clearInterval(t.interval); t.interval = null;
+  if (t.elapsed > t.best) { t.best = t.elapsed; document.getElementById('bestTime-' + gear).textContent = formatTime(t.best); }
+  await saveHangBest(t.elapsed);
+  await loadHangBest(gear);
+  document.getElementById('timerDisplay-' + gear).className = 'timer-display done';
+  document.getElementById('btnStop-' + gear).style.display = 'none';
+  if (t.set < 2) document.getElementById('btnNext-' + gear).style.display = '';
+  updateDots(gear);
+}
+function nextSet(gear) {
+  const t = getT(gear);
+  document.getElementById('dot' + t.set + '-' + gear).className = 'set-dot done-dot';
+  t.set++;
+  document.getElementById('btnNext-' + gear).style.display = 'none';
+  document.getElementById('btnStart-' + gear).style.display = '';
+  document.getElementById('timerDisplay-' + gear).textContent = '00:00';
+  document.getElementById('timerDisplay-' + gear).className = 'timer-display';
+  document.getElementById('setLabel-' + gear).textContent = 'Set ' + (t.set + 1) + ' of 3';
+  updateDots(gear);
+}
+function resetHang(gear) {
+  const t = getT(gear);
+  clearInterval(t.interval);
+  t.interval = null; t.set = 0; t.best = 0; t.elapsed = 0;
+  document.getElementById('timerDisplay-' + gear).textContent = '00:00';
+  document.getElementById('timerDisplay-' + gear).className = 'timer-display';
+  document.getElementById('btnStart-' + gear).style.display = '';
+  document.getElementById('btnStop-' + gear).style.display = 'none';
+  document.getElementById('btnNext-' + gear).style.display = 'none';
+  document.getElementById('setLabel-' + gear).textContent = 'Set 1 of 3';
+  document.getElementById('bestTime-' + gear).textContent = '—';
+  for (let i = 0; i < 3; i++) document.getElementById('dot' + i + '-' + gear).className = 'set-dot';
+  updateDots(gear);
+}
+function updateDots(gear) {
+  const t = getT(gear);
+  for (let i = 0; i < 3; i++) {
+    const dot = document.getElementById('dot' + i + '-' + gear);
+    if (i < t.set) dot.className = 'set-dot done-dot';
+    else if (i === t.set) dot.className = 'set-dot active-dot';
+    else dot.className = 'set-dot';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// STATUS + INIT
+// ═══════════════════════════════════════════════════════════════════
+function setDbStatus(ok, msg) {
+  document.getElementById('dbDot').className = 'db-dot' + (ok ? '' : ' err');
+  document.getElementById('dbStatus').textContent = msg;
+}
+
+(async function init() {
+  // Render both views up front
+  document.getElementById('view4day').innerHTML = renderGear('4day');
+  document.getElementById('view3day').innerHTML = renderGear('3day');
+  bindInputs('4day');
+  bindInputs('3day');
+
+  try {
+    await openDB();
+    await migrateFromLocalStorage();
+    await hydrateInputs('4day');
+    await hydrateInputs('3day');
+    await loadHangBest('4day');
+    await loadHangBest('3day');
+    const last = await dbGet('meta', 'last_gear');
+    if (last && last !== currentGear) switchGear(last);
+    setDbStatus(true, 'IndexedDB connected — changes save on edit');
+  } catch(e) {
+    setDbStatus(false, 'IndexedDB unavailable — edits won\'t persist');
+  }
+  updateDots('4day');
+  updateDots('3day');
+})();
+</script>
+</body>
+</html>
